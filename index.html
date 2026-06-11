@@ -382,6 +382,56 @@
     border-radius:6px 6px 0 0; display:block;
     margin: -20px -16px 12px; width: calc(100% + 32px);
   }
+
+  /* ── EDIT MODAL ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #132240; border: 1.5px solid var(--border);
+    border-radius: 10px; padding: 32px; width: 100%; max-width: 520px;
+    position: relative;
+  }
+  .modal-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem; color: var(--gold); margin-bottom: 20px;
+  }
+  .modal-close {
+    position: absolute; top: 16px; right: 16px;
+    background: transparent; border: none; color: var(--off-white);
+    font-size: 1.4rem; cursor: pointer; opacity: 0.6; line-height: 1;
+  }
+  .modal-close:hover { opacity: 1; }
+  .modal-btns { display: flex; gap: 12px; margin-top: 8px; }
+  .btn-save {
+    background: var(--gold); color: var(--black);
+    border: none; padding: 11px 24px; border-radius: 4px;
+    font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.9rem;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .btn-save:hover { background: var(--gold-light); }
+  .btn-cancel {
+    background: transparent; border: 1.5px solid var(--border);
+    color: var(--off-white); padding: 11px 24px; border-radius: 4px;
+    font-family: 'Inter', sans-serif; font-weight: 600; font-size: 0.9rem;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-cancel:hover { border-color: var(--off-white); }
+  .btn-edit {
+    background: transparent; border: 1px solid rgba(43,127,220,0.5);
+    color: #7BB8F0; padding: 5px 12px; border-radius: 4px;
+    font-size: 0.75rem; cursor: pointer; font-family: 'Inter', sans-serif;
+    transition: all 0.2s; margin-right: 6px;
+  }
+  .btn-edit:hover { background: rgba(43,127,220,0.15); }
+  .edit-img-preview {
+    width: 100%; max-height: 120px; object-fit: cover;
+    border-radius: 6px; border: 1px solid var(--border);
+    margin-top: 8px; display: none;
+  }
 </style>
 </head>
 <body>
@@ -434,7 +484,7 @@
     <span class="info-icon">🕘</span>
     <div>
       <div class="info-label">Hours</div>
-      <div class="info-val">Opens 9 AM Daily</div>
+      <div class="info-val">9 AM – 6 PM · Closed Sunday</div>
     </div>
   </div>
   <div class="info-item">
@@ -469,7 +519,6 @@
   <h2 class="section-title">Something for Everyone</h2>
   <div class="cat-grid">
     <div class="cat-card"><div class="cat-icon">📱</div><div class="cat-name">Electronics</div></div>
-    <div class="cat-card"><div class="cat-icon">📷</div><div class="cat-name">Security Cameras</div></div>
     <div class="cat-card"><div class="cat-icon">🍫</div><div class="cat-name">Snacks</div></div>
     <div class="cat-card"><div class="cat-icon">🥤</div><div class="cat-name">Drinks</div></div>
     <div class="cat-card"><div class="cat-icon">🔧</div><div class="cat-name">Tools</div></div>
@@ -495,7 +544,6 @@
   <div class="inv-filters" id="invFilters">
     <button class="filter-btn active" data-cat="All" onclick="filterInv(this)">All</button>
     <button class="filter-btn" data-cat="Electronics" onclick="filterInv(this)">Electronics</button>
-    <button class="filter-btn" data-cat="Security" onclick="filterInv(this)">Security</button>
     <button class="filter-btn" data-cat="Snacks" onclick="filterInv(this)">Snacks</button>
     <button class="filter-btn" data-cat="Drinks" onclick="filterInv(this)">Drinks</button>
     <button class="filter-btn" data-cat="Tools" onclick="filterInv(this)">Tools</button>
@@ -538,9 +586,8 @@
         <div>
           <div class="contact-key">Store Hours</div>
           <div class="hours-grid">
-            <span class="hours-day">Mon – Fri</span><span class="hours-time">9:00 AM – Close</span>
-            <span class="hours-day">Saturday</span><span class="hours-time">9:00 AM – Close</span>
-            <span class="hours-day">Sunday</span><span class="hours-time">9:00 AM – Close</span>
+            <span class="hours-day">Mon – Sat</span><span class="hours-time">9:00 AM – 6:00 PM</span>
+            <span class="hours-day">Sunday</span><span class="hours-time">Closed</span>
           </div>
         </div>
       </div>
@@ -597,7 +644,6 @@
           <label>Category</label>
           <select id="invCat">
             <option>Electronics</option>
-            <option>Security</option>
             <option>Snacks</option>
             <option>Drinks</option>
             <option>Tools</option>
@@ -762,7 +808,10 @@ function renderAdminInvList() {
         <div class="admin-item-title">${i.name} ${i.price ? '· ' + i.price : ''}</div>
         <div class="admin-item-sub">${i.cat} · ${statusLabel[i.status]}</div>
       </div>
-      <button class="btn-del" onclick="deleteInventory(${i.id})">Remove</button>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <button class="btn-edit" onclick="openEditModal(${i.id})">Edit</button>
+        <button class="btn-del" onclick="deleteInventory(${i.id})">Remove</button>
+      </div>
     </div>`).join('');
 }
 
@@ -831,8 +880,132 @@ function toast(msg) {
   toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
 }
 
+
+// ── EDIT MODAL ──
+let _editPendingImg = null;
+
+function openEditModal(id) {
+  const item = inventory.find(i => i.id === id);
+  if (!item) return;
+  document.getElementById('editId').value = id;
+  document.getElementById('editName').value = item.name;
+  document.getElementById('editCat').value = item.cat;
+  document.getElementById('editPrice').value = item.price || '';
+  document.getElementById('editStatus').value = item.status;
+  document.getElementById('editDesc').value = item.desc || '';
+  document.getElementById('editImgUrl').value = (item.img && !item.img.startsWith('data:')) ? item.img : '';
+  const prev = document.getElementById('editImgPreview');
+  if (item.img) { prev.src = item.img; prev.style.display = 'block'; }
+  else { prev.src = ''; prev.style.display = 'none'; }
+  _editPendingImg = null;
+  document.getElementById('editImgFile').value = '';
+  document.getElementById('editModal').classList.add('open');
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').classList.remove('open');
+  _editPendingImg = null;
+}
+
+function handleEditImgUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    _editPendingImg = e.target.result;
+    const prev = document.getElementById('editImgPreview');
+    prev.src = _editPendingImg; prev.style.display = 'block';
+    document.getElementById('editImgUrl').value = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveEdit() {
+  const id = parseInt(document.getElementById('editId').value);
+  const idx = inventory.findIndex(i => i.id === id);
+  if (idx === -1) return;
+  const urlVal = document.getElementById('editImgUrl').value.trim();
+  const img = _editPendingImg || urlVal || inventory[idx].img || null;
+  inventory[idx] = {
+    ...inventory[idx],
+    name: document.getElementById('editName').value.trim() || inventory[idx].name,
+    cat: document.getElementById('editCat').value,
+    price: document.getElementById('editPrice').value.trim(),
+    status: document.getElementById('editStatus').value,
+    desc: document.getElementById('editDesc').value.trim(),
+    img
+  };
+  save();
+  closeEditModal();
+  toast('Item updated!');
+  renderAll();
+}
+
+// Close modal on overlay click
+document.getElementById('editModal').addEventListener('click', function(e) {
+  if (e.target === this) closeEditModal();
+});
+
 // Init
 renderAll();
 </script>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeEditModal()">✕</button>
+    <div class="modal-title">✏️ Edit Item</div>
+    <input type="hidden" id="editId">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Item Name</label>
+        <input type="text" id="editName" placeholder="Item name">
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="editCat">
+          <option>Electronics</option>
+          <option>Snacks</option>
+          <option>Drinks</option>
+          <option>Tools</option>
+          <option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Price (optional)</label>
+        <input type="text" id="editPrice" placeholder="e.g. $12.00">
+      </div>
+      <div class="form-group">
+        <label>Stock Status</label>
+        <select id="editStatus">
+          <option value="in-stock">In Stock</option>
+          <option value="limited">Limited</option>
+          <option value="out">Out of Stock</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Description (optional)</label>
+      <input type="text" id="editDesc" placeholder="Short description">
+    </div>
+    <div class="form-group">
+      <label>Item Image (optional)</label>
+      <div class="img-input-wrap">
+        <input type="text" id="editImgUrl" placeholder="Paste image link (URL)">
+        <div class="img-or">or</div>
+        <label class="img-upload-btn" for="editImgFile">📷 Upload New Photo</label>
+        <input type="file" id="editImgFile" accept="image/*" style="display:none" onchange="handleEditImgUpload(this)">
+        <img id="editImgPreview" class="edit-img-preview">
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-save" onclick="saveEdit()">💾 Save Changes</button>
+      <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
